@@ -1,0 +1,108 @@
+---
+title: "625 Trend"
+author: "Longfei Zhang"
+date: "12/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(timeDate)
+library(readr)
+library(parallel)
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r}
+mydata <- read_csv('C:/Users/ZLF/Documents/Iowa_Data.csv', show_col_types = FALSE)
+```
+
+
+```{r}
+mydata$mydate <- unclass(as.Date(mydata$Date, format = '%m/%d/%Y'))
+mydata$mydate <- mydata$mydate-min(mydata$mydate)+1
+```
+
+```{r}
+mydata <- mydata%>%
+  group_by(Item.Number) %>%
+  mutate(State.Bottle.Retail=mean(State.Bottle.Retail)) %>%
+  mutate(State.Bottle.Cost=mean(State.Bottle.Cost)) %>%
+  mutate(Profit=(State.Bottle.Retail-State.Bottle.Cost)*Bottles.Sold)
+```
+
+```{r}
+total_profit <- mydata %>% group_by(Item.Number) %>%
+              mutate(tol_profit=sum(Profit)) %>%
+              mutate(botl_profit=State.Bottle.Retail-State.Bottle.Cost) %>%
+              distinct(Item.Number, tol_profit, botl_profit, State.Bottle.Cost) %>%
+              filter(botl_profit>0) %>%
+              filter(botl_profit<60) %>%
+              arrange(desc(tol_profit), desc(botl_profit))
+```
+
+```{r}
+plot(total_profit$botl_profit, total_profit$tol_profit)
+plot(total_profit$State.Bottle.Cost, total_profit$tol_profit)
+```
+
+```{r}
+top10 <- total_profit[1:10, ]
+```
+
+
+
+
+```{r}
+profit_date <- mydata %>% group_by(Item.Number, mydate) %>%
+              mutate(p=sum(Profit)) %>%
+              distinct(Item.Number, mydate, p)
+```
+
+
+
+```{r}
+trend <- list(NULL)
+length(trend) <- 10
+#names(trend) <- top10$Item.Number
+#for(i in 1:10){
+  tmp <- profit_date %>%
+    filter(Item.Number==top10$Item.Number[1]) %>%
+    mutate(week=rep(1:209, each=7)[mydate]) %>%
+    group_by(week) %>% 
+    mutate(week_p = sum(p)) %>%
+    distinct(week, week_p) %>%
+    arrange(week)
+  trend[i] <- as.vector(tmp$week_p)
+  names(trend[i]) <- top10$Item.Number[i]
+#}
+```
+
+
+```{r}
+trend_plot <- ggplot()
+trend_plot <- trend_plot + geom_line(aes(tmp$week, tmp$week_p))
+p <- ggplot()+geom_line(aes(tmp$week, tmp$week_p))+ stat_smooth(method=gam)
+p <- ggplot(tmp, aes(week, week_p)) + stat_smooth(method='loess')
+```
+
+
+```{r}
+cl <- makeCluster(20)
+par
+stopCluster(cl)
+```
+
+```{r}
+mydate <- unclass(as.Date(mydata2$Date, format = '%m/%d/%Y'))
+mydate <- mydate-min(mydate)
+date_miss <- which(((1:1461)%in%unique(mydate))==FALSE)
+date_index <- 
+profit_count <- table(mydata$Profit, mydate)
+
+```
+
+
