@@ -13,6 +13,7 @@ library(readr)
 library(parallel)
 library(dplyr)
 library(ggplot2)
+library(tidyr)
 ```
 
 
@@ -36,7 +37,7 @@ mydata <- mydata%>%
 
 ```{r}
 total_profit <- mydata %>% group_by(Item.Number) %>%
-              mutate(tol_profit=sum(Profit)) %>%
+              mutate(tol_profit=sum(Profit)/1e6) %>%
               mutate(botl_profit=State.Bottle.Retail-State.Bottle.Cost) %>%
               distinct(Item.Number, tol_profit, botl_profit, State.Bottle.Cost) %>%
               filter(botl_profit>0) %>%
@@ -47,8 +48,8 @@ total_profit <- mydata %>% group_by(Item.Number) %>%
 
 
 ```{r}
-plot(total_profit$botl_profit, total_profit$tol_profit)
-plot(total_profit$State.Bottle.Cost, total_profit$tol_profit)
+p_plot <- ggplot(total_profit, aes(State.Bottle.Cost, tol_profit)) + geom_point(size = 1) + labs(title = 'Totoal Profit Plot', x = 'Bottle Cost (USD)', y = 'Total Profit (MUSD)')
+p_plot
 ```
 
 ```{r}
@@ -77,7 +78,7 @@ for(i in 1:10){
     mutate(week=rep(1:209, each=7)[mydate]) %>%
     add_row(week = 1:209, p = 0) %>%
     group_by(week) %>% 
-    mutate(week_p = sum(p)) %>%
+    mutate(week_p = sum(p)/1e3) %>%
     distinct(week, week_p) %>%
     arrange(week)
   trend[, i+1] <- as.vector(tmp$week_p)
@@ -88,7 +89,7 @@ for(i in 1:10){
 ```{r}
 trend.df <- as.data.frame(trend)
 trend.df <- trend.df %>% pivot_longer(-week)
-trend_plot <- ggplot(trend.df) + geom_smooth(aes(week,value,colour=name), method = 'loess', se = FALSE, formula = y~x)
+trend_plot <- ggplot(trend.df) + geom_smooth(aes(week,value,colour=name), method = 'loess', se = FALSE, formula = y~x) +labs(title = 'Top 10 Week Profit Trend', x = 'Week', y = 'Week Profit (kUSD)')
 trend_plot
 ```
 
@@ -99,11 +100,10 @@ tot.trend <- profit_date %>%
     mutate(week=rep(1:209, each=7)[mydate]) %>%
     add_row(week = 1:209, p = 0) %>%
     group_by(week) %>% 
-    mutate(week_p = sum(p)) %>%
+    mutate(week_p = sum(p)/1e6) %>%
     distinct(week, week_p) %>%
-    mutate(week_p = week_p/1e6) %>%
     arrange(week)
-tot.trend_plot <- ggplot(tot.trend) + geom_smooth(aes(week, week_p), method = 'loess', se = FALSE, formula = y~x)
+tot.trend_plot <- ggplot(tot.trend) + geom_smooth(aes(week, week_p), method = 'loess', se = FALSE, formula = y~x) + labs(title = 'Total Week Profit Trend', x = 'Week', y = 'Total Week Profit (MUSD)')
 tot.trend_plot
 ```
 
