@@ -1,0 +1,270 @@
+---
+title: "Biostat 650 HW1"
+author: "Haisheng Xu (haisheng)"
+date: "11/28/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r 1}
+data = readr::read_csv("Iowa_Liquor_Sales.csv")
+```
+
+
+```{r 2}
+names(data)
+
+
+summary(data)
+
+# Date, Store Number, City, County, Category, Vendor Number, Item number, Pack...
+
+
+length(unique(data$`Item Number`))
+length(unique(data$`Item Description`))
+```
+
+```{r clean}
+data_count_1 <- aggregate(data = data,              
+                          County~`Item Number`,
+                          function(x) length(unique(x)))
+data_count_1_order = data_count_1[order(-data_count_1$County),]
+data_count_1_order # COUNTY number
+
+
+
+data_count_2 <- aggregate(data = data,              
+                          `Store Number`~`Item Number`,
+                          function(x) length(unique(x)))
+data_count_2_order = data_count_2[order(-data_count_2$`Store Number`),]
+data_count_2_order # Store Number
+
+
+data_count_3 <- aggregate(data = data,              
+                          City~`Item Number`,
+                          function(x) length(unique(x)))
+data_count_3_order = data_count_3[order(-data_count_3$City),]
+data_count_3_order # City Number
+
+
+
+data2 = data[!duplicated(data$`Item Number`),]
+data2 = data2[c("Item Number", "Category", "Vendor Number", "Pack", "Bottle Volume (ml)", "State Bottle Retail")]
+data2
+
+data2 = merge(x = data2, y = data_count_1_order, by = "Item Number", all = TRUE)
+data2 = merge(x = data2, y = data_count_2_order, by = "Item Number", all = TRUE)
+data2 = merge(x = data2, y = data_count_3_order, by = "Item Number", all = TRUE)
+data2
+
+
+
+
+
+
+
+# Bottle sales
+bottle_sold <- aggregate(data = data,              
+                          `Bottles Sold`~`Item Number`,
+                          function(x) sum((x)))
+bottle_sold_order = bottle_sold[order(-bottle_sold$`Bottles Sold`),]
+bottle_sold_order
+
+# 10% As popular
+bottle_sold_order$Popularity = "Popular"
+bottle_sold_order[702:7017,]$Popularity = "Unpopular"
+summary(bottle_sold_order)
+
+data2 = merge(x = data2, y = bottle_sold_order, by = "Item Number", all = TRUE)
+data2
+
+#write.csv(data2, row.names = FALSE, file = "Liquor_Items.csv")
+
+
+
+
+```
+
+
+```{r d}
+
+data2 = read.csv("Liquor_Items.csv")
+data3 = na.omit(data2)
+
+
+
+plot(data2$Category, 
+     data2$Vendor.Number, 
+     pch=21, bg=c("red","green3")[unclass(data2$Popularity)], 
+     xlab="category", 
+     ylab="vendor")
+
+
+library(corrplot)
+data3$Store.Number
+
+# Store the overall correlation in `M`
+M <- cor(data3[,c(4:10)])
+
+# Plot the correlation plot with `M`
+corrplot(M, method="circle")
+
+
+
+
+# library(e1071)
+# 
+# svmfit = svm(Popularity ~ .-Item.Number, data = data3, kernel = "linear", cost = 10, scale = FALSE)
+# print(svmfit)
+```
+
+
+```{r 12}
+library(dplyr)
+data4 = data3
+
+
+data4$Category = as.factor(data4$Category)
+data4$Item.Number = as.factor(data4$Item.Number)
+data4$Vendor.Number = as.factor(data4$Vendor.Number)
+summary(data4)
+
+
+
+
+
+
+sample_size = floor(0.6*nrow(data4))
+set.seed(11111)
+random = sample(seq_len(nrow(data4)),size = sample_size)
+train4 =data4[random,]
+test4 =data4[-random,]
+
+full = glm(I(Popularity=="Popular")~.-Item.Number-Bottles.Sold, data = train4, family=binomial)
+nullmodel = glm(I(Popularity=="Popular")~1, data = train4, family=binomial)
+n=nrow(train)
+fit_step = step(nullmodel,scope=list(lower= nullmodel,
+upper=full),direction="both",k=log(n))
+
+summary(fit_step)$coefficients
+library(ResourceSelection)
+hoslem.test(fit_step$y, fit_step$fitted.values,g=10)
+
+
+library(ggplot2)
+etahat_fit = predict(fit_step, type = "link")
+pb_fit = predict(fit_step, type = "response")
+ggplot(train,aes(x= etahat_fit,y= pb_fit))+
+geom_point(aes(color=factor(Popularity)),position=position_jitter(height=0.03,width=0),size=0.5)+
+geom_line(aes(x= etahat_fit,y=pb_fit))+
+labs(x="eta_hat",y="probability")+
+scale_color_manual(values=c("red","blue"),name="Popularity",labels=c("Popular","Unpopular"))+
+geom_hline(yintercept=0.55,linetype="dashed")+
+geom_vline(xintercept=0.23,linetype="dashed")+
+scale_y_continuous(breaks=seq(0,1,by=0.1))+theme_bw()
+
+
+
+pihat_test = predict(fit_step,newdata=test,
+type="response")
+threshold = 0.55
+predicted_category =
+factor(ifelse(pihat_test>threshold, 1,0) )
+library(e1071)
+library(caret)
+confusionMatrix(data= predicted_category,reference= as.factor(as.numeric(I(test4$Popularity=="Popular"))))
+
+
+
+library(rpart)
+library(rpart.plot)
+fit <- rpart(Popularity~.-Item.Number-Bottles.Sold-newPopu, data = train4, method = 'class')
+rpart.plot(fit,cex = 0.5)
+
+predict_unseen <-predict(fit, test4, type = 'class')
+table_mat <- table(test4$Popularity, predict_unseen)
+table_mat
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+
+```
+
+
+```{r randomf}
+library(ISLR)
+
+sample_size = floor(0.6*nrow(data3))
+set.seed(11111)
+random = sample(seq_len(nrow(data3)),size = sample_size)
+train =data3[random,]
+test =data3[-random,]
+
+
+
+library(rpart)
+library(rpart.plot)
+fit <- rpart(Popularity~.-Item.Number-Bottles.Sold, data = train, method = 'class')
+rpart.plot(fit,cex = 0.5)
+
+predict_unseen <-predict(fit, test, type = 'class')
+table_mat <- table(test$Popularity, predict_unseen)
+table_mat
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+
+
+
+rf = randomForest::randomForest(Bottles.Sold~.-Item.Number-Popularity, data = train)
+pred = predict(rf, newdata=test)
+cm = table(test[,11], pred)
+cm
+
+library(tree)
+tree = tree(Popularity~.-Item.Number,data=train)
+tree
+plot(tree,lwd=1.5)
+text(tree,cex=0.65)
+
+predict_unseen <-predict(fit, data_test, type = 'class')
+
+summary(tree)
+
+
+
+
+```
+
+
+
+
+```{r nn}
+install.packages("neuralnet")
+require(neuralnet)
+
+train$Vendor.Number = as.factor(train$Vendor.Number)
+test$Vendor.Number = as.factor(test$Vendor.Number)
+
+nn=neuralnet(Popularity~.-Item.Number-Bottles.Sold-Vendor.Number-Category, data = train, hidden=3,act.fct = "logistic",
+                linear.output = FALSE)
+plot(nn)
+Predict=compute(nn,test2)
+Predict$net.result
+
+test2 = test
+names(test2)
+test2 = test2[,c(2,4:9)]
+prob <- Predict$net.result
+pred <- ifelse(prob>0.5, 1, 0)
+pred
+```
+
+
+
+```{r ts}
+
+
+
+```
