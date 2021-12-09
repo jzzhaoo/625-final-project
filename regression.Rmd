@@ -1,7 +1,7 @@
 ---
-title: "Biostat 650 HW1"
+title: "Biostat 625 Final Project draft"
 author: "Haisheng Xu (haisheng)"
-date: "11/28/2021"
+date: "12/9/2021"
 output:
   pdf_document: default
   html_document: default
