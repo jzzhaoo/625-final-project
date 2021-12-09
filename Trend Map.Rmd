@@ -65,29 +65,31 @@ profit_date <- mydata %>% group_by(Item.Number, mydate) %>%
 
 
 ```{r}
-trend <- list(NULL)
-length(trend) <- 10
-#names(trend) <- top10$Item.Number
-#for(i in 1:10){
+trend <- matrix(0, nrow = 209, ncol = 11)
+trend[, 1] <- 1:209
+colnames(trend) <- c('week', top10$Item.Number)
+for(i in 1:10){
   tmp <- profit_date %>%
-    filter(Item.Number==top10$Item.Number[1]) %>%
+    filter(Item.Number==top10$Item.Number[i]) %>%
+    ungroup %>%
     mutate(week=rep(1:209, each=7)[mydate]) %>%
+    add_row(week = 1:209, p = 0) %>%
     group_by(week) %>% 
     mutate(week_p = sum(p)) %>%
     distinct(week, week_p) %>%
     arrange(week)
-  trend[i] <- as.vector(tmp$week_p)
-  names(trend[i]) <- top10$Item.Number[i]
-#}
+  trend[, i+1] <- as.vector(tmp$week_p)
+}
 ```
 
 
 ```{r}
-trend_plot <- ggplot()
-trend_plot <- trend_plot + geom_line(aes(tmp$week, tmp$week_p))
-p <- ggplot()+geom_line(aes(tmp$week, tmp$week_p))+ stat_smooth(method=gam)
-p <- ggplot(tmp, aes(week, week_p)) + stat_smooth(method='loess')
+trend.df <- as.data.frame(trend)
+trend.df <- trend.df %>% pivot_longer(-week)
+trend_plot <- ggplot(trend.df) + geom_smooth(aes(week,value,colour=name), method = 'loess', se = FALSE, formula = y~x)
+trend_plot
 ```
+
 
 
 ```{r}
@@ -96,13 +98,6 @@ par
 stopCluster(cl)
 ```
 
-```{r}
-mydate <- unclass(as.Date(mydata2$Date, format = '%m/%d/%Y'))
-mydate <- mydate-min(mydate)
-date_miss <- which(((1:1461)%in%unique(mydate))==FALSE)
-date_index <- 
-profit_count <- table(mydata$Profit, mydate)
 
-```
 
 
