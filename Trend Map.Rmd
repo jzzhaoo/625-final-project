@@ -108,6 +108,14 @@ tot.trend_plot
 ```
 
 
+```{r}
+tmp <- mydata %>% 
+      distinct(Category, Item.Number) %>%
+      group_by(Category) %>%
+      count(Category)
+tmp <- tmp[order(tmp$n, decreasing = T), ]
+tmp
+```
 
 
 ```{r}
