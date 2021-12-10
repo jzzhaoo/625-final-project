@@ -48,7 +48,7 @@ total_profit <- mydata %>% group_by(Item.Number) %>%
 
 
 ```{r}
-p_plot <- ggplot(total_profit, aes(State.Bottle.Cost, tol_profit)) + geom_point(size = 1) + labs(title = 'Totoal Profit Plot', x = 'Bottle Cost (USD)', y = 'Total Profit (MUSD)')
+p_plot <- ggplot(total_profit, aes(State.Bottle.Cost, tol_profit)) + geom_point(size = 1) + labs(title = 'Total Profit Plot', x = 'Bottle Cost (USD)', y = 'Total Profit (MUSD)')
 p_plot
 ```
 
@@ -116,6 +116,21 @@ tmp <- mydata %>%
 tmp <- tmp[order(tmp$n, decreasing = T), ]
 tmp
 ```
+
+```{r}
+sales_week <- mydata %>% 
+              group_by(mydate) %>%
+              mutate(p=sum(Sale..Dollars.)) %>%
+              distinct(mydate, p) %>%
+              ungroup %>%
+              mutate(week=rep(1:209, each=7)[mydate]) %>%
+              add_row(week = 1:209, p = 0) %>%
+              group_by(week) %>% 
+              mutate(week_p = sum(p)/1e6) %>%
+              distinct(week, week_p) %>%
+              arrange(week)
+```
+
 
 
 ```{r}
