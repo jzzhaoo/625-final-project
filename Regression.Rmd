@@ -1,0 +1,597 @@
+---
+title: "Biostat 625 Final Project draft"
+author: "Haisheng Xu (haisheng)"
+date: "12/9/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r 1}
+data = readr::read_csv("Iowa_Liquor_Sales.csv")
+```
+
+
+```{r 2}
+names(data)
+
+
+summary(data)
+
+# Date, Store Number, City, County, Category, Vendor Number, Item number, Pack...
+
+
+length(unique(data$`Item Number`))
+length(unique(data$`Item Description`))
+```
+
+```{r clean}
+data_count_1 <- aggregate(data = data,              
+                          County~`Item Number`,
+                          function(x) length(unique(x)))
+data_count_1_order = data_count_1[order(-data_count_1$County),]
+data_count_1_order # COUNTY number
+
+
+
+data_count_2 <- aggregate(data = data,              
+                          `Store Number`~`Item Number`,
+                          function(x) length(unique(x)))
+data_count_2_order = data_count_2[order(-data_count_2$`Store Number`),]
+data_count_2_order # Store Number
+
+
+data_count_3 <- aggregate(data = data,              
+                          City~`Item Number`,
+                          function(x) length(unique(x)))
+data_count_3_order = data_count_3[order(-data_count_3$City),]
+data_count_3_order # City Number
+
+
+
+data2 = data[!duplicated(data$`Item Number`),]
+data2 = data2[c("Item Number", "Category", "Vendor Number", "Pack", "Bottle Volume (ml)", "State Bottle Retail")]
+data2
+
+data2 = merge(x = data2, y = data_count_1_order, by = "Item Number", all = TRUE)
+data2 = merge(x = data2, y = data_count_2_order, by = "Item Number", all = TRUE)
+data2 = merge(x = data2, y = data_count_3_order, by = "Item Number", all = TRUE)
+data2
+
+
+
+
+
+
+
+# Bottle sales
+bottle_sold <- aggregate(data = data,              
+                          `Bottles Sold`~`Item Number`,
+                          function(x) sum((x)))
+bottle_sold_order = bottle_sold[order(-bottle_sold$`Bottles Sold`),]
+bottle_sold_order
+
+# 10% As popular
+bottle_sold_order$Popularity = "Popular"
+bottle_sold_order[702:7017,]$Popularity = "Unpopular"
+summary(bottle_sold_order)
+
+data2 = merge(x = data2, y = bottle_sold_order, by = "Item Number", all = TRUE)
+data2
+
+#write.csv(data2, row.names = FALSE, file = "Liquor_Items.csv")
+
+
+
+
+```
+
+
+```{r d}
+
+data2 = read.csv("Liquor_Items.csv")
+data3 = na.omit(data2)
+
+
+
+plot(data2$Category, 
+     data2$Vendor.Number, 
+     pch=21, bg=c("red","green3")[unclass(data2$Popularity)], 
+     xlab="category", 
+     ylab="vendor")
+
+
+library(corrplot)
+data3$Store.Number
+
+# Store the overall correlation in `M`
+M <- cor(data3[,c(4:10)])
+
+# Plot the correlation plot with `M`
+corrplot(M, method="color")
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot(M, method="color", col=col(200),  
+         type="upper",  
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+          insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE 
+         )
+
+
+
+# library(e1071)
+# 
+# svmfit = svm(Popularity ~ .-Item.Number, data = data3, kernel = "linear", cost = 10, scale = FALSE)
+# print(svmfit)
+```
+
+
+```{r 12}
+library(dplyr)
+data4 = data3
+
+
+data4$Category = as.factor(data4$Category)
+data4$Item.Number = as.factor(data4$Item.Number)
+data4$Vendor.Number = as.factor(data4$Vendor.Number)
+summary(data4)
+
+
+
+
+
+
+sample_size = floor(0.6*nrow(data4))
+set.seed(11111)
+random = sample(seq_len(nrow(data4)),size = sample_size)
+train4 =data4[random,]
+test4 =data4[-random,]
+
+full = glm(I(Popularity=="Popular")~.-Item.Number-Bottles.Sold, data = train4, family=binomial)
+nullmodel = glm(I(Popularity=="Popular")~1, data = train4, family=binomial)
+n=nrow(train)
+fit_step = step(nullmodel,scope=list(lower= nullmodel,
+upper=full),direction="both",k=log(n))
+
+summary(fit_step)$coefficients
+library(ResourceSelection)
+hoslem.test(fit_step$y, fit_step$fitted.values,g=10)
+
+
+library(ggplot2)
+etahat_fit = predict(fit_step, type = "link")
+pb_fit = predict(fit_step, type = "response")
+ggplot(train,aes(x= etahat_fit,y= pb_fit))+
+geom_point(aes(color=factor(Popularity)),position=position_jitter(height=0.03,width=0),size=0.5)+
+geom_line(aes(x= etahat_fit,y=pb_fit))+
+labs(x="eta_hat",y="probability")+
+scale_color_manual(values=c("red","blue"),name="Popularity",labels=c("Popular","Unpopular"))+
+geom_hline(yintercept=0.55,linetype="dashed")+
+geom_vline(xintercept=0.23,linetype="dashed")+
+scale_y_continuous(breaks=seq(0,1,by=0.1))+theme_bw()
+
+
+
+pihat_test = predict(fit_step,newdata=test,
+type="response")
+threshold = 0.55
+predicted_category =
+factor(ifelse(pihat_test>threshold, 1,0) )
+library(e1071)
+library(caret)
+confusionMatrix(data= predicted_category,reference= as.factor(as.numeric(I(test4$Popularity=="Popular"))))
+
+
+
+library(rpart)
+library(rpart.plot)
+fit <- rpart(Popularity~.-Item.Number-Bottles.Sold-newPopu, data = train4, method = 'class')
+rpart.plot(fit,cex = 0.5)
+
+predict_unseen <-predict(fit, test4, type = 'class')
+table_mat <- table(test4$Popularity, predict_unseen)
+table_mat
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+
+```
+
+
+```{r randomf}
+library(ISLR)
+
+sample_size = floor(0.6*nrow(data3))
+set.seed(11111)
+random = sample(seq_len(nrow(data3)),size = sample_size)
+train =data3[random,]
+test =data3[-random,]
+
+
+
+library(rpart)
+library(rpart.plot)
+fit <- rpart(Popularity~.-Item.Number-Bottles.Sold, data = train, method = 'class')
+rpart.plot(fit,cex = 0.5)
+
+predict_unseen <-predict(fit, test, type = 'class')
+table_mat <- table(test$Popularity, predict_unseen)
+table_mat
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+
+
+
+rf = randomForest::randomForest(Bottles.Sold~.-Item.Number-Popularity, data = train)
+pred = predict(rf, newdata=test)
+cm = table(test[,11], pred)
+cm
+
+library(tree)
+tree = tree(Popularity~.-Item.Number,data=train)
+tree
+plot(tree,lwd=1.5)
+text(tree,cex=0.65)
+
+predict_unseen <-predict(fit, data_test, type = 'class')
+
+summary(tree)
+
+
+
+
+```
+
+
+
+
+```{r nn}
+install.packages("neuralnet")
+require(neuralnet)
+
+train$Vendor.Number = as.factor(train$Vendor.Number)
+test$Vendor.Number = as.factor(test$Vendor.Number)
+
+nn=neuralnet(Popularity~.-Item.Number-Bottles.Sold-Vendor.Number-Category, data = train, hidden=3,act.fct = "logistic",
+                linear.output = FALSE)
+plot(nn)
+Predict=compute(nn,test2)
+Predict$net.result
+
+test2 = test
+names(test2)
+test2 = test2[,c(2,4:9)]
+prob <- Predict$net.result
+pred <- ifelse(prob>0.5, 1, 0)
+pred
+```
+
+
+
+```{r ts}
+library(lubridate)
+library(astsa)
+
+ts <-read.csv("salesbyweek.csv")
+ts.sales <-ts(ts[,2],start=decimal_date(ymd("2017-10-31")),freq=365.25/7)
+
+tsplot(ts.sales,type="l")
+
+diff.log <- diff(log(ts.sales))
+tsplot(diff.log, xlab = "", ylab = "Log(Sales)", main="")
+
+
+
+
+```
+- The time series is not stationary. Overall, The values increases through the time, and this time series may have
+heteroskedasticity by looking at the plot.
+- I may use log() and diff() to transform the time series to remove the trend and seasonality.
+- The notable trend is that the time series values increase through the time with seasonality.
+- From the plot, we can see that there may be a seasonality each year.
+- The transformed time series using differencing is shown above.
+
+
+
+
+```{r ts2}
+acf(diff.log)
+pacf(diff.log)
+acf2(diff.log, max.lag=200)
+
+
+# At the seasonal lags: the ACF cuts off at seasonal lag 3. The PACF either cuts of at lag 1, or tails
+# off. So, let us use max.P = 3, max.Q = 1.
+# At the lower lags: the ACF cuts off at lag 1, whereas the PACF cuts off at lag 2 or tails off. So, the non-seasonal
+# part seems to be an MA(1), AR(2). Thus, let us use max.p = 2 and max.q = 1.
+```
+```{r ts4}
+acf(diff.log)
+pacf(diff.log)
+```
+Interpretation 1: Maybe the ACF is cutting off at lag 1 and the PACF is tailing off. This would suggest an MA(1) for
+diff.log, which is equivalent to an ARIMA(0,1,1) for log.
+Interpretation 2: Maybe the ACF is tailing off and the PACF is cutting off at lag 7. This would suggest an AR(7) for diff.log.p,
+which is equivalent to an ARIMA(7,1,0) for log.p.
+```{r tsar}
+fit.ma1 <- sarima(diff.log,0,0,1)
+fit.ar7 <- sarima(diff.log,7,0,0)
+
+fit.ma1$AIC
+fit.ma1$BIC
+fit.ar7$AIC
+fit.ar7$BIC
+# Choose MA(1)
+```
+
+```{r tsf}
+ip.pred <- sarima.for(log(ts.sales),24,1,1,0)
+exp(ip.pred$pred)
+
+
+
+
+#Seasonality
+library(forecast)
+# Automated forecasting using an exponential model
+fit <- ets(myts)
+
+# Automated forecasting using an ARIMA model
+fit <- auto.arima(ts.sales) 
+fit
+
+ts.sales.s <- sarima.for(log(ts.sales),36,4,1,1,1,0,0,36)
+
+```
+
+
+```{r tsonline}
+fit <- stl(ts.sales, s.window="period")
+plot(fit)
+
+
+# simple exponential - models level
+fit <- HoltWinters(ts.sales, beta=FALSE, gamma=FALSE)
+# double exponential - models level and trend
+fit <- HoltWinters(ts.sales, gamma=FALSE)
+# triple exponential - models level, trend, and seasonal components
+fit <- HoltWinters(ts.sales)
+
+# predictive accuracy
+library(forecast)
+accuracy(fit)
+
+# predict next three future values
+library(forecast)
+forecast(fit, 3)
+plot(forecast(fit, 3)) 
+
+
+
+
+# fit an ARIMA model of order P, D, Q
+fit <- arima(ts.sales, order=c(4, 1, 1))
+
+# predictive accuracy
+library(forecast)
+accuracy(fit)
+
+# predict next 5 observations
+library(forecast)
+forecast(fit, 5)
+plot(forecast(fit, 5)) 
+
+library(forecast)
+# Automated forecasting using an exponential model
+fit <- ets(myts)
+
+# Automated forecasting using an ARIMA model
+fit <- auto.arima(ts.sales) 
+fit
+```
+
+```{r ts3}
+n = length(ts.sales)
+max.p = 2
+max.d = 1
+max.q = 1
+max.P = 3
+max.D = 1
+max.Q = 1
+BIC.array =array(NA,dim=c(max.p+1,max.d+1,max.q+1,max.P+1,max.D+1,max.Q+1))
+AIC.array =array(NA,dim=c(max.p+1,max.d+1,max.q+1,max.P+1,max.D+1,max.Q+1))
+best.bic <- 1e8
+x.ts = log(ts.sales)
+for (p in 0:max.p) for(d in 0:max.d) for(q in 0:max.q)
+for (P in 0:max.P) for(D in 0:max.D) for(Q in 0:max.Q)
+{
+# This is a modification of a function originally from the book:
+# Cowpertwait, P.S.P., Metcalfe, A.V. (2009), Introductory Time
+# Series with R, Springer.
+# Modified by M.A.R. Ferreira (2016, 2020).
+  cat("p=",p,", d=",d,", q=",q,", P=",P,", D=",D,", Q=",Q,"\n")
+  fit <- tryCatch(
+    { arima(x.ts, order = c(p,d,q),
+      seas = list(order = c(P,D,Q),
+      frequency(x.ts)),method="CSS-ML")
+      },
+      error = function(cond){
+      message("Original error message:")
+      message(cond)
+      # Choose a return value in case of error
+      return(NA)
+    }
+  )
+  if(!is.na(fit)){
+  number.parameters <- length(fit$coef) + 1
+  BIC.array[p+1,d+1,q+1,P+1,D+1,Q+1] = -2*fit$loglik + log(n)*number.parameters
+  AIC.array[p+1,d+1,q+1,P+1,D+1,Q+1] = -2*fit$loglik + 2*number.parameters
+  if (BIC.array[p+1,d+1,q+1,P+1,D+1,Q+1] < best.bic)
+    {
+    best.bic <- BIC.array[p+1,d+1,q+1,P+1,D+1,Q+1]
+    best.fit <- fit
+    best.model <- c(p,d,q,P,D,Q)
+    }
+  }
+}
+
+
+```
+
+
+
+```{r tsmonth}
+ts
+
+
+ts.sales2 <-ts(ts2[,2],start=decimal_date(ymd("2017-10-31")),freq=12)
+
+tsplot(ts.sales2,type="l")
+
+diff.log2 <- diff(log(ts.sales2))
+tsplot(diff.log2, xlab = "", ylab = "Log(Sales)", main="")
+
+
+#Seasonality
+library(forecast)
+# Automated forecasting using an exponential model
+#fit <- ets(myts)
+
+# Automated forecasting using an ARIMA model
+fit <- auto.arima(ts.sales) 
+fit
+
+#Complex seasonality
+fit %>%
+  forecast() %>%
+  autoplot(include=208) +
+    ylab("Sales") + xlab("Date")
+
+
+forecast(fit)$pred
+```
+
+
+```{r forcasttest}
+library(ggplot2)
+p1 <- autoplot(ts.sales) +
+  ylab("Sales") + xlab("Date")
+p2 <- autoplot(window(ts.sales, end=2020)) +
+  ylab("Sales") + xlab("Date") 
+gridExtra::grid.arrange(p1,p2)
+
+
+ts.sales %>% mstl() %>%
+  autoplot() + xlab("Week")
+
+
+#Complex seasonality
+fit %>%
+  forecast() %>%
+  autoplot(include=208) +
+    ylab("Sales") + xlab("Date")
+
+
+
+fit4 <- auto.arima(ts.sales, seasonal=FALSE, lambda=0,
+         xreg=fourier(ts.sales, K=c(5)))
+fit4 %>%
+  forecast(xreg=fourier(ts.sales, K=c(5), h=52*2)) %>%
+  autoplot(include=208) +
+    ylab("Sales") + xlab("Date")
+
+
+
+
+#calls %>%  stlf() %>%
+#  autoplot() + xlab("Week")
+```
+
+```{r timeseriesfinalmodule1}
+
+# Without considering seasonality in a short time period
+library(lubridate)
+library(astsa)
+
+ts <-read.csv("salesbyweek.csv")
+ts.sales <-ts(ts[,2],start=decimal_date(ymd("2017-10-31")),freq=365.25/7)
+
+tsplot(ts.sales,type="l")
+
+diff.log <- diff(log(ts.sales))
+tsplot(diff.log, xlab = "", ylab = "Log(Sales)", main="")
+
+acf(diff.log)
+pacf(diff.log)
+
+
+
+#Interpretation 1: Maybe the ACF is cutting off at lag 1 and the PACF is tailing off. This would suggest an MA(1) for
+#diff.log, which is equivalent to an ARIMA(0,1,1) for log.
+#Interpretation 2: Maybe the ACF is tailing off and the PACF is cutting off at lag 7. This would suggest an AR(7) for diff.log.p,
+# which is equivalent to an ARIMA(7,1,0) for log.p.
+fit.ma1 <- sarima(diff.log,0,0,1)
+fit.ar7 <- sarima(diff.log,7,0,0)
+
+fit.ma1$AIC
+fit.ma1$BIC
+fit.ar7$AIC
+fit.ar7$BIC
+# Choose MA(1)
+
+# Final model without considering the seasonality
+ip.pred <- sarima.for(log(ts.sales),24,1,1,0)
+exp(ip.pred$pred)
+exp(ip.pred$pred-1.96*ip.pred$se)
+exp(ip.pred$pred+1.96*ip.pred$se)
+```
+
+
+```{r timeseriesfinalmodule2}
+library(lubridate)
+library(astsa)
+
+ts <-read.csv("salesbyweek.csv")
+ts.sales <-ts(ts[,2],start=decimal_date(ymd("2017-10-31")),freq=365.25/7)
+
+
+library(ggplot2)
+p1 <- autoplot(ts.sales) +
+  ylab("Sales") + xlab("Date")
+p2 <- autoplot(window(ts.sales, end=2020)) +
+  ylab("Sales") + xlab("Date") 
+gridExtra::grid.arrange(p1,p2)
+
+
+ts.sales %>% mstl() %>%
+  autoplot() + xlab("Week")
+
+
+#Seasonality
+library(forecast)
+
+# Automated forecasting using an ARIMA model
+fit <- auto.arima(ts.sales) 
+fit
+
+#Complex seasonality
+fit %>%
+  forecast() %>%
+  autoplot(include=208) +
+    ylab("Sales") + xlab("Date")
+
+
+#Complex seasonality
+fit %>%
+  forecast() %>%
+  autoplot(include=208) +
+    ylab("Sales") + xlab("Date")
+
+
+forecast(fit)
+```
