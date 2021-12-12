@@ -129,7 +129,57 @@ sales_week <- mydata %>%
               mutate(week_p = sum(p)/1e6) %>%
               distinct(week, week_p) %>%
               arrange(week)
+
+sales_month <- mydata %>% 
+              group_by(mydate) %>%
+              mutate(p=sum(Sale..Dollars.)) %>%
+              distinct(mydate, p) %>%
+              ungroup %>%
+              mutate(month=rep(1:49, each=30)[mydate]) %>%
+              add_row(month = 1:49, p = 0) %>%
+              group_by(month) %>% 
+              mutate(month_p = sum(p)/1e6) %>%
+              distinct(month, month_p) %>%
+              arrange(month)
 ```
+
+```{r }
+myweek <- 1:104
+meanX <- mean(myweek)
+SSX <- sum((myweek-meanX)^2)
+
+mylm <- function(sale, date){
+  sale1 <- sale[date<105]
+  date1 <- date[date<105]
+  b1 <- sum(sale1*(date1-meanX))/SSX
+  
+  sale2 <- sale[date>104]
+  date2 <- date[date>104]
+  b2 <- sum(sale2*(date2-104-meanX))/SSX
+  
+  return(b2/b1)
+}
+
+```
+
+
+```{r Covid_index}
+Covid_index <- mydata %>%
+              group_by(Item.Number) %>%
+              mutate(tot_sale = sum(Bottles.Sold)) %>%
+              filter(tot_sale>1000) %>%
+              mutate(week = rep(1:209, each=7)[mydate]) %>%
+              filter(week < 209) %>%
+              ungroup %>%
+              group_by(Item.Number, week) %>% 
+              mutate(week_s = sum(Bottles.Sold)) %>%
+              ungroup %>%
+              distinct(Item.Number, week, week_s) %>%
+              group_by(Item.Number) %>%
+              mutate(Covid_index = mylm(week_s, week)) %>%
+              distinct(Item.Number, Covid_index)
+```
+
 
 
 
