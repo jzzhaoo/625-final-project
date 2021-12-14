@@ -167,7 +167,7 @@ mylm <- function(sale, date){
 Covid_index <- mydata %>%
               group_by(Item.Number) %>%
               mutate(tot_sale = sum(Bottles.Sold)) %>%
-              filter(tot_sale>730) %>%
+              filter(tot_sale>=730) %>%
               mutate(week = rep(1:209, each=7)[mydate]) %>%
               filter(week < 209) %>%
               ungroup %>%
