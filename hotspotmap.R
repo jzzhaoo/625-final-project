@@ -1,8 +1,10 @@
-rm(list = ls())
+#install the following library
 library(sf)
 library(mapview)
-library(ggmap)
-sales <- read.csv("C:\\Users\\zzr\\Downloads\\Iowa_Liquor_Sales.csv")
+
+
+#import and modify data
+sales <- read.csv("Iowa_Liquor_Sales.csv")
 total <- cbind(sales$Store.Number,sales$Store.Location,sales$Sale..Dollars.,sales$Date)
 colnames(total) <- c("store","location","dollar","date")
 total <- as.data.frame(total)
@@ -17,12 +19,14 @@ total <- total[-c(5,6)]
 total$date <- as.Date(total$date,"%m/%d/%y")
 total <- total[order(total$date),]
 
+
 #2 years before covid
 before <- total[1:4720306,]
 nstoreb <- length(unique(before$store))
 storesumb <- matrix(0,nrow = nstoreb,ncol = 2)
 storesumb <- aggregate(before$dollar,list(before$store), FUN=sum)
 colnames(storesumb) <- c("store","dollar")
+
 
 ##add location
 before <- cbind(sales$Store.Number,sales$Store.Location)
@@ -38,10 +42,9 @@ before <- na.omit(before)
 before <- before[!duplicated(before$store),]
 
 
-##add sales value
-storesumb <- cbind(storesumb,rep(0,1834))
+storesumb <- cbind(storesumb,rep(0,nstoreb))
 colnames(storesumb) <- c("store","dollar","location")
-for (i in 1:1834) {
+for (i in 1:nstoreb) {
   j <- which(storesumb[i,1]==before[,1])
   if(length(j) == 0){
   }else{
@@ -49,90 +52,96 @@ for (i in 1:1834) {
   }
 }
 
-before$lon<- c(1:length(before$location))
-before$lat<- c(1:length(before$location))
+
+before<- storesumb
+
+
+###store with no location
+nolocationb <- which(before$location == "0")
+before <- before[-c(nolocationb),] #removed stores with no geo info
+nolocationb <- before[nolocationb,1] #114 store with no geo info
+
+
+before$lon<- rep(0,length(before$location))
+before$lat<- rep(0,length(before$location))
 for (i in 1:length(before$location)) {
   before$lon[i] <- sapply(strsplit(before$location[i], " "), "[", 1)
   before$lat[i] <- sapply(strsplit(before$location[i], " "), "[", 2)
 }
 
 
-###store with no location
-nolocation <- which(before$location == "")
-nolocation <- before[nolocation,1]
-nolocation <- length(unique(nolocation))
+
+#map with sf
+before_sf <- st_as_sf(before, coords = c("lon", "lat"), crs = 4326)
+before_sf <- before_sf[-c(768,1718),] #two wrong geo info
+before_sf$log_sales_perday <- log(before_sf$dollar/730)
+mapview(before_sf,zcol = "log_sales_perday" )
+
+
+
+
+
+
+
+
+
 
 
 
 # covid 2 years
 covid <- total[4720307:9913937,]
 nstorec <- length(unique(covid$store))
-
-# get store sum
-storesum <- matrix(0,nrow = 2218,ncol = 2)
-storesum <-aggregate(total$dollar,list(total$stote), FUN=sum)
-colnames(storesum) <- c("store","dollar")
-
-#get location
-total3 <- cbind(sales$Store.Number,sales$Store.Location)
-colnames(total3) <- c("store","location")
-total3 <- as.data.frame(total3)
-total3$location<-substr(total3$location,8,nchar(total3$location)-1 )
-total3 <- unique(total3)
-total3 <- total3[order(total3$store),]
-total3$location[total3$location==""] <- NA
-total3 <- na.omit(total3)
-
-#add sales value
-total1 <- cbind(total1,rep(0,2218))
-colnames(total3) <- c("store","location","dollar")
-for (i in 1:2215) {
-  j <- which(total3[i,1]==total1[,1])
-  total3[i,3] <- total1[j,2]
-}
-#get sale per day
+storesumc <- matrix(0,nrow = nstorec,ncol = 2)
+storesumc <- aggregate(covid$dollar,list(covid$store), FUN=sum)
+colnames(storesumc) <- c("store","dollar")
 
 
+##add location
+covid <- cbind(sales$Store.Number,sales$Store.Location)
+colnames(covid) <- c("store","location")
+covid <- as.data.frame(covid)
+covid$location<-substr(covid$location,8,nchar(covid$location)-1 )
 
 
-#wrong geo location 4722 9936 5876 
+covid <- unique(covid)
+covid <- covid[order(covid$store),]
+covid$location[covid$location==""] <- NA
+covid <- na.omit(covid)
+covid <- covid[!duplicated(covid$store),]
 
-total3$lon<- c(1:length(total3$location))
-total3$lat<- c(1:length(total3$location))
-for (i in 1:length(total3$location)) {
-  total3$lon[i] <- sapply(strsplit(total3$location[i], " "), "[", 1)
-  total3$lat[i] <- sapply(strsplit(total3$location[i], " "), "[", 2)
+
+storesumc <- cbind(storesumc,rep(0,nstorec))
+colnames(storesumc) <- c("store","dollar","location")
+for (i in 1:nstorec) {
+  j <- which(storesumc[i,1]==covid[,1])
+  if(length(j) == 0){
+  }else{
+    storesumc[i,3] <- covid[j,2]
+  }
 }
 
-#initial
-locations_sf <- st_as_sf(total3, coords = c("lon", "lat"), crs = 4326)
-locations_sf <- locations_sf[-c(871,1867,2212),]
-mapview(locations_sf)
+
+covid<- storesumc
+
+
+###store with no location
+nolocationc <- which(covid$location == "0")
+covid <- covid[-c(nolocationc),] #removed stores with no geo info
+nolocationc <- covid[nolocationc,1] #132 store with no geo info
+
+
+covid$lon<- rep(0,length(covid$location))
+covid$lat<- rep(0,length(covid$location))
+for (i in 1:length(covid$location)) {
+  covid$lon[i] <- sapply(strsplit(covid$location[i], " "), "[", 1)
+  covid$lat[i] <- sapply(strsplit(covid$location[i], " "), "[", 2)
+}
 
 
 
-
-
-
-
-
-
-
-
-
-#using ggmap
-map <- get_stamenmap(bbox = c(left=-96.90981,bottom=40.00000, right=-89.75335,top=43.81075),
-                     zoom=7,
-                     maptype = "toner-hybrid")
-total3$sales <- log(total3$V3)
-total3$perday<- total3$V3/(365*4)
-
-ggmap(map) +
-  geom_point(data = total3, aes(x = as.numeric(lon), y = as.numeric(lat),color = sales ))+
-
-  scale_color_gradient(low="blue", high="red")
-
-
-
-
+#map with sf
+covid_sf <- st_as_sf(covid, coords = c("lon", "lat"), crs = 4326)
+covid_sf <- covid_sf[-c(740),] #one wrong geo info
+covid_sf$log_sales_perday <- log(covid_sf$dollar/730)
+mapview(covid_sf,zcol = "log_sales_perday" )
 
