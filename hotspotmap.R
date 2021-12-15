@@ -1,15 +1,14 @@
 #install the following library
 library(sf)
 library(mapview)
+library(data.table)
 
 
-#import and modify data
-sales <- read.csv("Iowa_Liquor_Sales.csv")
-total <- cbind(sales$Store.Number,sales$Store.Location,sales$Sale..Dollars.,sales$Date)
+names <- fread("C:\\Users\\zzr\\Downloads\\Iowa_Liquor_Sales.csv", nrows = 0)
+total <- fread("C:\\Users\\zzr\\Downloads\\Iowa_Liquor_Sales.csv", select = c("Store Number","Store Location","Sale (Dollars)", "Date"))
+#for faster importing process, I used fread to first get the column names, then I still used fread to get the columns that I wanted. 
 colnames(total) <- c("store","location","dollar","date")
-total <- as.data.frame(total)
 total$dollar <- as.numeric(total$dollar)
-
 
 #sort date
 total$date1 <- substr(total$date,1,6)
@@ -19,7 +18,6 @@ total <- total[-c(5,6)]
 total$date <- as.Date(total$date,"%m/%d/%y")
 total <- total[order(total$date),]
 
-
 #2 years before covid
 before <- total[1:4720306,]
 nstoreb <- length(unique(before$store))
@@ -27,9 +25,8 @@ storesumb <- matrix(0,nrow = nstoreb,ncol = 2)
 storesumb <- aggregate(before$dollar,list(before$store), FUN=sum)
 colnames(storesumb) <- c("store","dollar")
 
-
 ##add location
-before <- cbind(sales$Store.Number,sales$Store.Location)
+before <- cbind(total$store,total$location)
 colnames(before) <- c("store","location")
 before <- as.data.frame(before)
 before$location<-substr(before$location,8,nchar(before$location)-1 )
@@ -52,9 +49,7 @@ for (i in 1:nstoreb) {
   }
 }
 
-
 before<- storesumb
-
 
 ###store with no location
 nolocationb <- which(before$location == "0")
@@ -68,8 +63,6 @@ for (i in 1:length(before$location)) {
   before$lon[i] <- sapply(strsplit(before$location[i], " "), "[", 1)
   before$lat[i] <- sapply(strsplit(before$location[i], " "), "[", 2)
 }
-
-
 
 #map with sf
 before_sf <- st_as_sf(before, coords = c("lon", "lat"), crs = 4326)
@@ -91,13 +84,13 @@ mapview(before_sf,zcol = "log_sales_perday" )
 # covid 2 years
 covid <- total[4720307:9913937,]
 nstorec <- length(unique(covid$store))
+
 storesumc <- matrix(0,nrow = nstorec,ncol = 2)
 storesumc <- aggregate(covid$dollar,list(covid$store), FUN=sum)
 colnames(storesumc) <- c("store","dollar")
 
-
 ##add location
-covid <- cbind(sales$Store.Number,sales$Store.Location)
+covid <- cbind(total$store,total$location)
 colnames(covid) <- c("store","location")
 covid <- as.data.frame(covid)
 covid$location<-substr(covid$location,8,nchar(covid$location)-1 )
@@ -110,6 +103,7 @@ covid <- na.omit(covid)
 covid <- covid[!duplicated(covid$store),]
 
 
+
 storesumc <- cbind(storesumc,rep(0,nstorec))
 colnames(storesumc) <- c("store","dollar","location")
 for (i in 1:nstorec) {
@@ -120,9 +114,7 @@ for (i in 1:nstorec) {
   }
 }
 
-
 covid<- storesumc
-
 
 ###store with no location
 nolocationc <- which(covid$location == "0")
@@ -136,8 +128,6 @@ for (i in 1:length(covid$location)) {
   covid$lon[i] <- sapply(strsplit(covid$location[i], " "), "[", 1)
   covid$lat[i] <- sapply(strsplit(covid$location[i], " "), "[", 2)
 }
-
-
 
 #map with sf
 covid_sf <- st_as_sf(covid, coords = c("lon", "lat"), crs = 4326)
