@@ -6,7 +6,6 @@ library(data.table)
 
 names <- fread("C:\\Users\\zzr\\Downloads\\Iowa_Liquor_Sales.csv", nrows = 0)
 total <- fread("C:\\Users\\zzr\\Downloads\\Iowa_Liquor_Sales.csv", select = c("Store Number","Store Location","Sale (Dollars)", "Date"))
-#for faster importing process, I used fread to first get the column names, then I still used fread to get the columns that I wanted. 
 colnames(total) <- c("store","location","dollar","date")
 total$dollar <- as.numeric(total$dollar)
 
@@ -79,8 +78,6 @@ mapview(before_sf,zcol = "log_sales_perday" )
 
 
 
-
-
 # covid 2 years
 covid <- total[4720307:9913937,]
 nstorec <- length(unique(covid$store))
@@ -104,9 +101,9 @@ covid <- covid[!duplicated(covid$store),]
 
 
 
-storesumc <- cbind(storesumc,rep(0,nstorec))
+storesumc <- cbind(storesumc,rep(0,2044))
 colnames(storesumc) <- c("store","dollar","location")
-for (i in 1:nstorec) {
+for (i in 1:2044) {
   j <- which(storesumc[i,1]==covid[,1])
   if(length(j) == 0){
   }else{
