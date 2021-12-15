@@ -2,7 +2,7 @@
 title: "625 Trend"
 author: "Longfei Zhang"
 date: "12/5/2021"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
