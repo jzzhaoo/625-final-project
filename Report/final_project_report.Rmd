@@ -1,5 +1,5 @@
 ---
-title: "Iowa Sales Analysis"
+title: \vspace{3in} Iowa Sales Analysis
 subtitle: "Biostat 625 Final Project Report"
 author: "Group 15: Hua Jiang, Haisheng Xu, Longfei Zhang, Jessica Zhao"
 date: "12/14/2021"
@@ -13,19 +13,27 @@ header-includes:
   - \usepackage[font={small}]{caption}
   - \captionsetup[figure]{labelformat=empty}
 ---
+\centering
+
+\raggedright
+\pagenumbering{gobble}
+\newpage
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 \pagenumbering{arabic}
 
-\pagebreak
+
 
 ### Background
-|       The pandemic of COVID-19 hit the world by surprise in early 2020 and had since left profound impacts to social, economical, and physiological aspects. As a worldwide pandemic that’s not going away anytime soon, it has certainly caused significant changes to public behaviors. Many industries such as airlines, leisure facilities, auto parts, restaurants, and etc. were negatively impacted, so was the alcoholic beverages consumption. But according to the surveillance report from the National Institute on Alcohol Abuse and Alcoholism, alcoholic beverages sales increased while the most sales of food and other drinks decreased during the pandemic of COVID-19[1]. Hence, our group was particularly interested in the economical impacts due to the pandemic. Through investigation on alcohol sales in Iowa, our group tried to figure out economic influences of the pandemic. And we believe that the analysis of the Iowa alcohol sales data provided a good reference to the overall trend in the retail sector. 
+|       The pandemic of COVID-19 hit the world by surprise in early 2020 and had since left profound impacts to social, economical, and physiological aspects. As a worldwide pandemic that’s not going away anytime soon, it has certainly caused significant changes to public behaviors. Many industries such as airlines, leisure facilities, auto parts, restaurants, and etc. were negatively impacted, so was the alcoholic beverages consumption. But according to the surveillance report from the National Institute on Alcohol Abuse and Alcoholism, alcoholic beverages sales increased while the most sales of food and other drinks decreased during the pandemic of COVID-19. Hence, our group was particularly interested in the economical impacts due to the pandemic. Through investigation on alcohol sales in Iowa, our group tried to figure out economic influences of the pandemic. And we believe that the analysis of the Iowa alcohol sales data provided a good reference to the overall trend in the retail sector. 
 
 ### Dataset
-|       The dataset chosen for this analysis is the “Iowa Liquor Sales” data publicly available from the state of Iowa. More specifically, this dataset contains the alcohol purchase records of Iowa Class “E” liquor licensees from January 1, 2012 to current. Class E liquor license, for grocery, liquor, convenience stores, etc., allows the above to sell liquor for off-premises consumption in unopened original containers in a commercial setting[2]. For our analysis, sales data from Oct. 2017 to Oct. 2021 was selected, such as store, brand, sales volume, and sales price, considering data duplication, completion, etc. Overall, more than 9,900,000 observations and 24 variables were evaluated. The dataset is extremely large and intricate. It would be hard to do the analysis on the dataset directly. We need to clean such a large data (more than 2.4G) in different ways for each method, and we need to make sure each function we use works perfectly on our large dataset. In the stage of data processing, we removed data entries with missing values due to the limitation in analytical methods and tried to use vectorization for better performance.
+|       The dataset chosen for this analysis is the “Iowa Liquor Sales” data publicly available from the state of Iowa. More specifically, this dataset contains the alcohol purchase records of Iowa Class “E” liquor licensees from January 1, 2012 to current. Class E liquor license, for grocery, liquor, convenience stores, etc., allows the above to sell liquor for off-premises consumption in unopened original containers in a commercial setting. For our analysis, sales data from Oct. 2017 to Oct. 2021 was selected, such as store, brand, sales volume, and sales price, considering data duplication, completion, etc. Overall, more than 9,900,000 observations and 24 variables were evaluated. The dataset is extremely large and intricate. It would be hard to do the analysis on the dataset directly. We need to clean such a large data (more than 2.4G) in different ways for each method, and we need to make sure each function we use works perfectly on our large dataset. In the stage of data processing, we removed data entries with missing values due to the limitation in analytical methods and tried to use vectorization for better performance.
 
 ### Method
 |       To figure out the trends of alcohol sales and have a better understanding on the characteristics of popular alcohol drinks, we decided to use the following five methods: Exploratory Data Analysis, Sales Trend Analysis, Correlation Analysis, Classifications, and Visualizations. In the Exploratory Data Analysis part, we summarized the statistics of our data using overall sales trends and tried to find the best methods for further analysis. In the Sales Analysis section, we mainly used the Time Series method to see if there was an obvious trend and seasonality in overall sales. At the same time, we predicted the future trends of sales with and without seasonality in this part. Next, we simply conducted correlation analysis to see the associations for the quantitative variables between bottle sold and other variables. After that, we tried to use classification for two different response variables to see the characteristics of popular alcohol drinks. Finally, we summarized and reported our results by visualizations. 
@@ -108,19 +116,7 @@ knitr::include_graphics(c("Capture3.PNG" ,"Rplotutr.png"))
 
 |       Based on Iowa liquor sales data from Oct. 31, 2017 to Oct. 31, 2021, we firstly verified that the alcohol industry maintained a strong growth trend during the covid pandemic. Then, through GeoMap visualization, we found that stores located in suburban areas tend to gain more increase in sales. Time series analysis shows that sales of liquor in Iowa will still grow but at a slower pace with the similar seasonality compared to the trend before, maybe because of public adaptation to life under the pandemic. And the classification results show that the alcoholic beverage with a larger pack, larger bottle volume, lower retailed price, and more places people can buy would be more popular. We did not find the characteristics of the alcohol products which became more popular during the pandemic of COVID-19 based on our data.
 
-|       For map visualization, around 100 stores had a missing value for the store location which could not be plotted on the map and led to flaws in our analysis. For time series analysis, we only retrieved four years of data which is not enough for more detailed time series analysis. Some variables have too many levels which are not compatible for some classifications. The variables in the dataset for classification might be insignificant. For the classifications, we cannot identify whether those characteristics, like bottle volume, pack, retailed price, and so on, make the alcohol products become popular. To investigate more for the popular alcohol products in the future study, more survey data is needed.
-
-
-\pagebreak
-### Contribution
-|       The background and dataset were written by Hua Jiang, the methods section by Longfei Zhang and Jessica Zhao, the result section by Haisheng Xu and Longfei Zhang. The conclusions and discussion section together with reviewing and proofreading of this report, all coding, and creation of the presentation slides were completed as a group.
-
-### Reference
-[1]
-SURVEILLANCE REPORT COVID-19. (2021, October). _Alcohol sales during the covid-19 pandemic_. National Institute on Alcohol Abuse and Alcoholism. Retrieved December 15, 2021, from https://pubs.niaaa.nih.gov/publications/surveillance-covid-19/COVSALES.htm 
-
-[2]
-Alcoholic Beverage Division . (2021, November). _Iowa liquor sales_. data.iowa.gov. Retrieved December 15, 2021, from https://data.iowa.gov/Sales-Distribution/Iowa-Liquor-Sales/m3tr-qhgy/data 
+|       However, we still have some noticeable limitations on our study. For map visualization, around 100 stores had a missing value for the store location which could not be plotted on the map and led to flaws in our analysis. For time series analysis, we only retrieved four years of data which is not enough for more detailed time series analysis. Some variables have too many levels which are not compatible for some classifications. The variables in the dataset for classification might be insignificant. For the classifications, we cannot identify whether those characteristics, like bottle volume, pack, retailed price, and so on, make the alcohol products become popular. To investigate more for the popular alcohol products in the future study, more survey data is needed.
 
 
 
