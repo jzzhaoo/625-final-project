@@ -12,3 +12,5 @@ Group Member: Hua Jiang, Haisheng Xu, Longfei Zhang, Jessica Zhao
 - `Classification` Folder: There is one .RMD file which conducts individually data cleaning procedures, data correlation analysis, and tries to conduct different classification methods.
 - `Report` Folder: In this folder, we have our final report .RMD file and corresponding .pdf file. 
 
+## Contribution
+- The background and dataset were written by Hua Jiang, the methods section by Longfei Zhang and Jessica Zhao, the result section by Haisheng Xu and Longfei Zhang. The conclusions and discussion section together with reviewing and proofreading of this report, all coding, and creation of the presentation slides were completed as a group.
